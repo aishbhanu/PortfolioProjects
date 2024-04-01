@@ -109,7 +109,7 @@ Select *, (RollingPeopleVaccinated/population)*100
  From #percentpopulationvaccinated
 
 
- -- Creating a View
+ -- Creating a View for later visualisations
  
 Create View percentofpopulationvaccinated as
  Select cd.continent, cd.location, cd.date, cd.population,
