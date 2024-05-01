@@ -1,0 +1,192 @@
+# Exploring the relationship between types of emissions, population density, energy usage, and GDP per capita in G7 countries via various visualisations.
+# Data for this analysis was obtained from the World Bank WDI database(https://databank.worldbank.org/source/world-developmentindicators) using the WDI library in R-studio. 
+
+
+install.packages("tidyverse")
+install.packages("cowplot")
+library(ggplot2)
+library(cowplot)
+library(tidyverse)
+library(dplyr)
+library(CGPfunctions)
+library(maps)
+install.packages("mapdata")
+install.packages("fmsb")
+install.packages("rworldmap")
+library(WDI)
+library(fmsb)
+
+new_wdi_cache <- WDIcache()
+
+data1 <-WDI(country= "all" ,
+ indicator = c("NY.GDP.MKTP.KD.ZG","NY.GDP.PCAP.KD.ZG","NY.GDP.PCAP.CD",
+ "EN.ATM.CO2E.PC","EG.USE.PCAP.KG.OE","NE.EXP.GNFS.ZS","EN.POP.DNST",
+ "SP.POP.GROW","SP.POP.TOTL.FE.ZS","SP.POP.TOTL.MA.ZS","SP.POP.TOTL",
+ "EN.ATM.CO2E.GF.KT","EN.ATM.CO2E.LF.KT","EN.ATM.CO2E.SF.KT","EN.ATM.HFCG.KT.CE",
+ "EN.ATM.METH.KT.CE","EN.ATM.NOXE.KT.CE","EN.ATM.PFCG.KT.CE","EN.ATM.GHGT.KT.CE",
+ 
+"EN.ATM.SF6G.KT.CE","EN.ATM.CO2E.KT","EN.ATM.METH.AG.KT.CE","EN.ATM.NOXE.AG.KT.CE"),
+ start = 1990, end = 2021,
+ cache = new_wdi_cache )
+
+# RENAMING
+data1 <- data1 %>% rename(GDP_growth_annual_percent = NY.GDP.MKTP.KD.ZG,
+ GDP_per_capita = NY.GDP.PCAP.CD,
+ GDP_per_capita_growth_annual_percent = NY.GDP.PCAP.KD.ZG,
+ CO2_emissions_metric_tons_per_capita = EN.ATM.CO2E.PC,
+ Energy_use_kg_of_oil_equivalent_per_capita = EG.USE.PCAP.KG.OE,
+ Exports_of_goods_and_services_percent_of_GDP = NE.EXP.GNFS.ZS,
+ Population_density_people_per_sq_km_of_land_area = EN.POP.DNST,
+ Population_total = SP.POP.TOTL,
+ CO2_emissions_from_gaseous_fuel_consumption_kt = EN.ATM.CO2E.GF.KT,
+ CO2_emissions_from_liquid_fuel_consumption_kt = EN.ATM.CO2E.LF.KT,
+ CO2_emissions_from_solid_fuel_consumption_kt = EN.ATM.CO2E.SF.KT,
+ HFC_gas_emissions_thousand_metric_tons_of_CO2_equivalent = 
+EN.ATM.HFCG.KT.CE,
+ Methane_emissions_kt_of_CO2_equivalent = EN.ATM.METH.KT.CE,
+ Nitrous_oxide_emissions_thousand_metric_tons_of_CO2_equivalent = 
+EN.ATM.NOXE.KT.CE,
+ )
+
+#Illustration of the global distribution of GDP per capita using maps library 
+data4 <- na.omit(data1)
+df <- data4 %>% group_by(country) %>% summarise(gdp = mean(GDP_per_capita))
+df2 <- df %>%
+ mutate(country = recode(country, "United States" = 'USA' , 
+ "United Kingdom" = "UK"))
+global_map_data<-map_data(map="world") 
+colnames(global_map_data)[c(5)] <- c("country") 
+global_map_data<-left_join(global_map_data,df2,by="country") 
+Map1<-ggplot(global_map_data,aes(x=long,y=lat,group=group))+labs(title = "GDP per capita 
+worldwide")+ 
+ geom_polygon(aes(fill= gdp),color="white")
+
+p1<-Map1+scale_fill_gradient(name='GDP_per_capita',low="blue",high="red",na.value 
+="grey",
+ )+
+ theme(axis.text.x = element_blank(), 
+ axis.text.y = element_blank(), 
+ axis.ticks = element_blank(), 
+ axis.title.x = element_blank(), 
+ axis.title.y = element_blank(), 
+ rect=element_blank(), 
+ panel.border = element_rect(color = "black", 
+ fill = NA, 
+ size = 1.0))
+print(p1) 
+
+ggsave("map.jpg",width = 11,height = 8.5,units = c("in"),dpi=300)
+
+#Selecting G7 countries
+data2 <- filter(data1, country == "Canada" | country =="United States" | country == "United 
+Kingdom" | country == "Germany" | 
+ country == "Italy" | country == "Japan" | country == "France")
+data5<- na.omit(data2)
+dfd <- data5 %>% group_by(country) %>% summarise(co2_emission = 
+mean(CO2_emissions_metric_tons_per_capita), gdp = mean(GDP_per_capita),
+ population_density=mean 
+(Population_density_people_per_sq_km_of_land_area),
+ 
+energy_use=mean(Energy_use_kg_of_oil_equivalent_per_capita)
+
+#A bubble chart is used to plot the relationship between the continuous variables of CO2 emissions, GDP per capita, and population density. 
+#The size of the bubbles represents population density, and the colour represents the country. 
+#Bubble
+library(dplyr)
+library(ggplot2)
+install.packages("hrbrthemes")
+library(hrbrthemes)
+library(viridis)
+p2 <- ggplot(dfd, aes(x=gdp, y=co2_emission, 
+ size = population,
+ color=country)) + scale_x_continuous(trans = "log")+
+ geom_point(alpha=.6)+ scale_size(range = c(5,24),name = "Population density" )+
+ scale_fill_viridis(discrete=TRUE, guide=FALSE, option="A") +
+ theme_ipsum() +
+ ylab("CO2 Emission") +
+ xlab("Gdp per Capita")+labs(title="GDP per Capita vs CO2 Emissions: \n Impact of 
+Population Density", cex=0.1)
+p2
+
+# A line chart is used to show the evolution of GDP per capita, with different countries represented by lines of different colours.
+# Line graph 
+p3 <- ggplot(data2, aes(x = year, y = GDP_per_capita, colour = country)) + 
+ geom_line(xlim= c(1990,2021),size = 0.8) + # The function labs 
+allows to add and change labels like a title
+ labs(title = "GDP per Capita",
+ subtitle = "In thousand Dollars", 
+ x = "Year") + 
+ theme_classic() +
+ scale_colour_brewer(palette = "Dark")+
+ theme(axis.title.y = element_blank())+labs(title="Evolution of GDP per capita 1990 - 2021") 
+# Here: delete the title of the y axis
+p3
+
+#Grouping variables
+dfs <- data5 %>% group_by(country) %>% summarise(co2_emission = 
+mean(CO2_emissions_metric_tons_per_capita),HFC = 
+mean(HFC_gas_emissions_thousand_metric_tons_of_CO2_equivalent),
+ methane = mean(Methane_emissions_kt_of_CO2_equivalent),
+ nitrous_oxide = 
+mean(Nitrous_oxide_emissions_thousand_metric_tons_of_CO2_equivalent),
+ PFC = 
+mean(PFC_gas_emissions_thousand_metric_tons_of_CO2_equivalent),
+ greenhouse_gas = 
+mean(Total_greenhouse_gas_emissions_kt_of_CO2_equivalent),
+ SF6 = 
+mean(SF6_gas_emissions_thousand_metric_tons_of_CO2_equivalent),
+ population_density = 
+mean(Population_density_people_per_sq_km_of_land_area),
+ tot_population = mean(Population_total),
+ gdp = mean(GDP_per_capita),
+ co2 = mean(CO2_emissions_kt))
+
+#Converting to pivot format
+df4 <- df11 %>% pivot_longer(cols = c("co2_emission","methane","nitrous_oxide", ),
+ names_to = 'Types_of_Emissions',
+ values_to = 'Rate')
+
+# A circular stacked plot is used to show greenhouse gas emissions. The colours in the plot represent the different types of emissions in each country.
+#Circular stacked plot
+p4 <- ggplot(df4, aes(x = country, y = log(Rate), fill = Types_of_Emissions)) +
+ geom_bar(stat = "identity", color = "white",
+ lwd = 1, )+scale_fill_viridis_d()+
+ ylab("Value")+labs(title="Types of emission across G7 countries")+
+ theme(axis.text.x = element_text(color = "black", size = 6))
+p4 <- p4 + coord_polar()
+p4
+
+#Lollipop visualisation depicting gdp per capita of G7 countries.
+dfd1 <- filter(data2,year == "2021") # filtering data for 2021
+view(dfd1)
+p5 <- ggplot(dfd1, aes(x = country, y = dfd1$GDP_per_capita)) +
+ geom_segment(aes(x = country, xend = country, y = 0, yend = GDP_per_capita),
+ color = "gray", lwd = 1) +
+ geom_point(size = 7.5, pch = 21, bg = 4, col = 1) +
+ coord_flip() +
+ theme_minimal() +xlab("G7 Countries") +
+ ylab("GDP per capita")+labs(title=" GDP per capita of G7 countries 2021")
+p5
+
+#Depicting Energy usage of G7 countries via Donut chart
+#Donut
+data<- dfd
+# Compute percentages
+data$fraction = data$energy_use / sum(data$energy_use)
+# Compute the cumulative percentages (top of each rectangle)
+data$ymax = cumsum(data$fraction)
+# Compute the bottom of each rectangle
+data$ymin = c(0, head(data$ymax, n=-1))
+data$labelPosition <- (data$ymax + data$ymin) / 2
+data$label <- paste0(data$country, "\n Energy use: ", data$energy_use,)
+
+# Make the plot
+p6 <- ggplot(data, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=country)) +
+ geom_rect() +
+ geom_label( x=3.5, aes(y=labelPosition, label=label), size=2.1) +
+ scale_fill_brewer(palette=4) +
+ coord_polar(theta="y") +
+ xlim(c(2, 4)) +
+ theme_void() +
+ theme(legend.position = "none")+labs(title="Energy use of G7 countries")
+p6
