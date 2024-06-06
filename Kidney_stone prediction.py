@@ -43,9 +43,9 @@ warnings.filterwarnings('ignore')
 # LOADING DATASET
 
 
-df = pd.read_csv('/Users/abhishek/Downloads/train.csv')
-test_df = pd.read_csv('/Users/abhishek/Downloads/test.csv')
-df_og = pd.read_csv('/Users/abhishek/Downloads/kindey stone urine analysis.csv')
+df = pd.read_csv('Downloads/train.csv')
+test_df = pd.read_csv('Downloads/test.csv')
+df_og = pd.read_csv('Downloads/kindey stone urine analysis.csv')
 dff = test_df
 test_df = test_df.drop(['id'], axis=1)
 
